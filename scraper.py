@@ -52,7 +52,7 @@ def validateURL(url):
         else:
             ext = os.path.splitext(url)[1]
         validURL = r.status_code == 200
-        validFiletype = ext.lower() in ['.csv', '.xls', '.xlsx', '.pdf']
+        validFiletype = ext.lower() in ['.csv', '.xls', '.xlsx', '.pdf', '.xlsm']
         return validURL, validFiletype
     except:
         print ("Error validating URL.")
@@ -86,10 +86,12 @@ def convert_mth_strings ( mth_string ):
 
 #### VARIABLES 1.0
 
-entity_id = "CCG03C_NLWCCG_gov"
-url = "https://www.leedswestccg.nhs.uk/about/publications/expenditure-over-25k/"
+entity_id = "CCG08T_NSCCG_gov"
+url = "http://www.suttonccg.nhs.uk/News-Publications/publications/Pages/default.aspx"
 errors = 0
 data = []
+urls = ['http://www.suttonccg.nhs.uk/News-Publications/publications/Pages/default.aspx?&&p_SortBehavior=0&p_woqb=&&PageFirstRow=1&&View={AF48AE3E-44E3-4C16-AA8D-0566619F86BB}',
+        'http://www.suttonccg.nhs.uk/News-Publications/publications/Pages/default.aspx?Paged=TRUE&p_SortBehavior=0&p_woqb=&p_ID=38&PageFirstRow=31&&View={AF48AE3E-44E3-4C16-AA8D-0566619F86BB}']
 
 
 #### READ HTML 1.0
@@ -100,15 +102,42 @@ soup = BeautifulSoup(html, "lxml")
 
 #### SCRAPE DATA
 
-title_divs = soup.find_all('h1', 'entry__title')
-for title_div in title_divs:
-    block = title_div.find('a')
-    url = block['href']
-    title = block.text.strip()
-    csvMth = title.strip().split()[0][:3]
-    csvYr = title.strip().split()[-1]
-    csvMth = convert_mth_strings(csvMth.upper())
-    data.append([csvYr, csvMth, url])
+for i in urls:
+    html = urllib2.urlopen(i)
+    soup = BeautifulSoup(html, "lxml")
+    links = soup.find_all('a')
+    for link in links:
+        if 'Threshold' in link.text:
+            title = link.text.split()
+            csvMth = title[1][:3]
+            csvYr = title[-1]
+            url = 'http://www.suttonccg.nhs.uk/News-Publications/publications/_layouts/15/xlviewer.aspx?id='+link['href']
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, url])
+        if 'Expenditure' in link.text:
+            title = link.text
+            url = 'http://www.suttonccg.nhs.uk'+link['href']
+            if 'Apr13 - Mar14' in title:
+                csvMth = 'Y1'
+                csvYr = '2013'
+            if '2013_14' in title:
+                csvMth = 'Y1'
+                csvYr = '2013'
+            if '- March 2015' in title:
+                csvMth = '03'
+                csvYr = '2015'
+            if '- April 2014 -' in title:
+                csvMth = 'Y1'
+                csvYr = '2014'
+            if '2015-16' in title:
+                csvMth = 'Y1'
+                csvYr = '2015'
+            if '2015-16 April - September' in title:
+                csvMth = 'Y1'
+                csvYr = '2015'
+
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, url])
 
 #### STORE DATA 1.0
 
